@@ -1,43 +1,22 @@
 ---
 name: project-archaeology
-description: Reverse engineer any codebase and produce documentation sufficient to rebuild it from scratch without AI help. Outputs a forensic analysis (what the code does) and a rebuild plan (how to build it properly, per feature, in dependency order).
+description: Reverse engineer any codebase and produce documentation sufficient to rebuild it from scratch without AI help. Outputs a forensic analysis (what the code does) and a portable rebuild plan (how to build it properly, per feature, in dependency order).
 ---
 
-## Language
+## Glossary
 
-Use these terms consistently in all output documents.
+Use these terms consistently across all output documents.
 
-**Target codebase**:
-The software project being analyzed.
-_Avoid_: Input repo, source project, analyzed app
-
-**Forensic analysis**:
-A document describing what the target codebase *does* — extracted by reading the source. Contains architecture, dependencies, data model, and behavioral observations. Not a prescriptive design.
-_Avoid_: Reverse-engineering report, audit doc
-
-**Rebuild plan**:
-A document describing how to *build the target properly from scratch* — structured per feature, topologically sorted by dependency. Aspirational, not a transcription of the original implementation.
-_Avoid_: Build guide, reconstruction guide, how-to
-
-**Feature**:
-A cohesive unit of user-facing behavior in the target codebase. Each feature has two faces in the rebuild plan: a *what-it-does* section (from forensic analysis) and a *how-to-rebuild-it* section.
-_Avoid_: Module, component, subsystem
-
-**Topological sort**:
-The ordering of features in the rebuild plan such that no feature appears before its prerequisites.
-_Avoid_: Dependency order, build sequence
-
-**Checkpoint**:
-A verifiable milestone placed after 2-3 features in the rebuild plan. Includes a runnable command the developer can execute to confirm the build is on track.
-_Avoid_: Validation gate, milestone review
-
-**Tier**:
-A classification of features by importance to the app's purpose. Tier is independent of rebuild depth — a Minor feature that is security-critical still warrants careful treatment. Core features get full step-by-step treatment in the rebuild plan. Supporting features get outline treatment. Minor features are listed with a brief description. Every feature is listed regardless of tier.
-_Avoid_: Priority, severity, category
-
-**Effort**:
-A classification of how hard a feature is to rebuild correctly: Low (straightforward, well-understood pattern), Medium (non-trivial logic or integration), High (complex state, concurrency, external dependency, or subtle invariant). Effort is independent of tier — a Minor feature can be High effort.
-_Avoid_: Complexity, difficulty, size
+| Term | Definition | Avoid |
+|------|-----------|-------|
+| **Target codebase** | The software project being analyzed | Input repo, source project |
+| **Forensic analysis** | Evidence-based document describing what the target codebase *does*, extracted by reading the source | Reverse-engineering report, audit doc |
+| **Rebuild plan** | Aspirational document describing how to build the same system properly from scratch, per feature, in topological order. Not a transcription of the original | Build guide, reconstruction guide |
+| **Feature** | A cohesive unit of user-facing behavior | Module, component, subsystem |
+| **Topological sort** | Feature ordering where no feature appears before its prerequisites | Dependency order, build sequence |
+| **Checkpoint** | Verifiable milestone after 2–3 features; includes a runnable command to confirm progress | Validation gate, milestone review |
+| **Tier** | Feature classification by importance: Core (essential), Supporting (important), Minor (peripheral). Independent of effort | Priority, severity |
+| **Effort** | How hard a feature is to rebuild: Low, Medium, High. Independent of tier | Complexity, difficulty |
 
 ---
 
@@ -45,12 +24,9 @@ _Avoid_: Complexity, difficulty, size
 
 You are a Senior Software Architect, QA Engineer, Technical Writer, and Reverse Engineer.
 
-Your task is to completely understand an existing target codebase and produce two documents:
+Run all five phases sequentially in a single uninterrupted pass. Do not pause between phases, do not ask for confirmation, do not wait for user input. Produce all output files and deliver them at the end.
 
-1. **Forensic Analysis** — what the code does, extracted from reading the source
-2. **Rebuild Plan** — how to build it properly from scratch, per feature, in topological order
-
-The rebuild plan is *aspirational*: it designs a clean implementation for the same behavior, not a transcription of the original code.
+The central constraint: **`docs/rebuild-plan.md` must be fully portable.** A developer who copies only that file to a machine with no access to the original codebase must be able to rebuild the entire system. Every business rule, API contract, data shape, validation constraint, and algorithm extracted from the original must be stated inline in the rebuild plan — never referenced externally.
 
 Derive behavior from code. Derive design from principles.
 
@@ -58,197 +34,230 @@ Derive behavior from code. Derive design from principles.
 
 ## Outputs
 
-| File | Phase | Content |
-|------|-------|---------|
-| `docs/project-summary.md` | 1 | Purpose, stack, entry points, file tree, env vars, services |
-| `docs/forensic-analysis.md` | 2 | Architecture, data model, dependencies, behavioral observations, code quality |
-| `docs/feature-inventory.md` | 3 | Every extracted feature with tier, effort, and dependencies — reviewed before Phase 4 |
-| `docs/rebuild-plan.md` | 4 | Per-feature what-it-does + how-to-rebuild-it, topologically sorted |
+| File | Phase | What it contains |
+|------|-------|-----------------|
+| `docs/project-summary.md` | 1 | Purpose, stack, file tree, entry points, env vars, external services, local dev bootstrap |
+| `docs/forensic-analysis.md` | 2 | Architecture, data model, API contracts, validation rules, algorithms, behavioral observations, code quality |
+| `docs/feature-inventory.md` | 3 | Every feature with tier, effort, dependencies, triggers, inputs/outputs, edge cases |
+| `docs/rebuild-plan.md` | 4 | Fully portable standalone spec: setup, business rules, API contracts, data shapes, per-feature build instructions, tests |
 
 ---
 
 ## Quality Bar
 
-- Every Core-tier feature section in the rebuild plan must include a Mermaid sequence or flow diagram
-- The rebuild plan must open with a Mermaid component diagram showing all features and their runtime connections
-- Every feature must list its dependencies by name (or "none") and its effort level
-- Checkpoints must include a verifiable command the developer can run (matched to app type: shell command for CLIs, HTTP request for servers, `node -e` for libraries)
-- The rebuild plan must be buildable from an empty repo — no "see the original code" references
-- The rebuild plan must include a Setup section (env vars, services, local dev bootstrap) before Feature 1
-- Every Core feature's "How to Rebuild It" must include a directory scaffold
-- Every feature in the target codebase must be listed in the rebuild plan (Core / Supporting / Minor)
-- When uncertain about a forensic finding, mark it as `UNKNOWN` — do not hallucinate
+- `docs/rebuild-plan.md` is self-sufficient: no section references the forensic analysis, feature inventory, or any file path from the original codebase
+- Every API contract (method, path, request/response shapes, error codes) appears verbatim in the rebuild plan
+- Every validation rule, business constraint, and domain invariant is stated explicitly in plain language
+- Every Core feature includes a Mermaid sequence or flow diagram
+- The rebuild plan opens with a Mermaid integration map of all features and their runtime connections
+- Every feature lists its dependencies and effort level
+- Checkpoints use commands appropriate to the app type (HTTP, CLI, library, test runner)
+- Every Core feature's "How to Rebuild It" includes a directory scaffold
+- Every feature in the target codebase is listed — nothing skipped
+- Uncertainty is marked `UNKNOWN`, never fabricated
 
 ---
 
 ## Rules
 
-- Cite source files for forensic claims only. The rebuild plan is aspirational — do not cite it.
-- The rebuild plan must be self-contained. A developer needs nothing except this document and their own tools.
-- Do not assume implementation details when describing what the code does.
-- Be exhaustive in feature discovery. Leave nothing out.
-- Generate Mermaid diagrams for data flow, architecture, and state machines.
-- Prefer evidence from code over inference.
-- When uncertain, mark as `UNKNOWN`.
-- **Escalation rule**: If a Core feature has 2 or more `UNKNOWN` fields, stop and ask the user for clarification before continuing to Phase 4. Do not write a rebuild plan for a Core feature whose behavior is substantially unknown.
-- Flag inconsistencies specific to AI-generated code: duplicated logic, hallucinated API patterns, inconsistent naming, mixed architectural styles. These are common in vibe-coded apps and must be called out explicitly in the forensic analysis.
+1. **Portability**: Before writing any rebuild plan section, ask: "Can a developer on a new machine, with only this file, build this?" If no, expand until yes. No source file paths, no "see the forensic analysis", no "refer to the original".
+
+2. **Extract, don't refer**: Every business rule, validation constraint, data shape, API contract, and algorithm observed in the original must be transcribed into the rebuild plan in plain language.
+
+3. **Source citations belong only in the forensic analysis.** The rebuild plan is aspirational — it cites nothing from the original.
+
+4. **Be exhaustive in feature discovery.** No feature is too small to list.
+
+5. **Prefer evidence from code over inference.** When uncertain, mark `UNKNOWN`.
+
+6. **Escalation**: If a Core feature has 2 or more `UNKNOWN` fields, continue the run anyway. Write the rebuild plan with unknowns marked. Collect all unresolved unknowns in a **Blockers** table at the end of `docs/rebuild-plan.md`.
+
+7. **Flag AI-generated code patterns**: Duplicated logic, hallucinated library APIs, inconsistent naming, mixed architectural styles — these are common in vibe-coded apps and must be called out explicitly in the forensic analysis and corrected in the rebuild plan.
+
+8. **Generate Mermaid diagrams** for architecture, data flow, and state machines.
 
 ---
 
-## Phase 1: Project Inventory
+## Phase 1 — Project Inventory
 
-Read the entire repository structure. Produce: `docs/project-summary.md`.
+**Produces:** `docs/project-summary.md` → proceed immediately to Phase 2.
 
-**Present this file to the user and ask them to confirm it is accurate before proceeding to Phase 2.** Catching wrong assumptions here saves significant rework.
+Capture:
 
-Understand and document:
-
-- **Project purpose**: What does it do? What problem does it solve?
+- **Purpose**: What does it do? What problem does it solve?
 - **Primary users**: Who uses it?
-- **Technology stack**: Language, framework, database, runtime, major libraries
+- **Tech stack**: Language, framework, database, runtime, major libraries with versions
 - **File tree**: Every folder's purpose, key files
-- **Entry points**: Where does execution start? (main files, routes, CLIs)
-- **Build & run commands**: How to install, build, test, and run
-- **Dependencies**: All external packages/libraries with versions
-- **Environment variables**: Every env var the app reads, with its purpose and whether it is required or optional. Source: `.env.example`, `docker-compose.yml`, config files, or grep for `process.env` / `os.environ` / `getenv`
-- **External services**: Database, cache, queue, third-party APIs — what they are and how the app connects to them
-- **Local dev bootstrap**: The exact sequence of commands a developer needs to run to get the app running locally from a fresh clone
-
-If the project has a database (SQL, document store, etc.), note it. If it has API endpoints, note the pattern. If it is a CLI tool, library, or frontend-only app, adapt the remaining phases accordingly.
+- **Entry points**: Where execution starts (main files, routes, CLI commands)
+- **Build & run commands**: Install, build, test, run
+- **Dependencies**: All external packages with versions
+- **Environment variables**: Every env var the app reads — purpose, required/optional, default. Source from `.env.example`, `docker-compose.yml`, or grep for `process.env` / `os.environ` / `getenv`
+- **External services**: Database, cache, queue, third-party APIs — what they are and how the app connects
+- **Local dev bootstrap**: Exact command sequence from fresh clone to running app
 
 ---
 
-## Phase 2: Forensic Analysis
+## Phase 2 — Forensic Analysis
 
-Produce: `docs/forensic-analysis.md`
+**Produces:** `docs/forensic-analysis.md` → proceed immediately to Phase 3.
 
-Describe what the target codebase *does*, based on reading the source. This is an evidence-based report, not a design document.
+This is an evidence-based report. Cite source files for every claim. Do not prescribe design.
 
 ### System Overview
-
-- Purpose and primary users
-- Tech stack with major dependencies
+- Purpose, primary users, tech stack with major dependencies
 
 ### Architecture
-
 - High-level component map (Mermaid diagram)
-- How data flows through the system: request → processing → persistence → response
+- Data flow: request → processing → persistence → response
 - External integrations and services
 
 ### Data Model
+- All entities, tables, or collections
+- Relationships and key constraints (Mermaid ER diagram)
+- Field types, nullability, uniqueness
 
-- All entities, records, or tables
-- Relationships between them
-- Key fields and constraints (Mermaid ER diagram)
+### API & Interface Contracts
+For every HTTP endpoint, CLI command, or public function:
+- Method + path (or command + flags)
+- Authentication requirement
+- Request: every field, type, required/optional
+- Response: every field, type, per status code
+- All error codes and what triggers each
+
+### Validation Rules & Business Constraints
+Every rule the system enforces, stated as assertions:
+- Field-level: type, format, length, range, enum values
+- Cross-field: conditional dependencies
+- Domain-level: invariants (user can only have one active X, Y must happen before Z)
+
+### Domain Algorithms
+Any non-trivial computation: scoring, ranking, pricing, permission checks, state transitions. Describe precisely enough to reimplement without reading the original.
 
 ### Behavioral Observations
-
-- State machines, event flows, or state transitions
-- Scheduled jobs, background processing, cron tasks
+- State machines and transitions
+- Scheduled jobs, background tasks
 - Side effects and external calls
-- Notable edge cases observed in the code
+- Notable edge cases the code handles or fails to handle
 
 ### Code Quality Observations
-
-Document issues found in the original code. This section informs the rebuild plan's "don't replicate this" decisions.
-
+Issues that the rebuild plan should correct:
 - **Duplicated logic**: Same behavior implemented in multiple places
 - **Dead code**: Unreachable branches, unused exports, commented-out blocks
-- **Inconsistencies**: Mixed naming conventions, mixed architectural patterns (e.g., some features use a service layer, others don't), inconsistent error handling
-- **Hallucinated patterns**: API calls or library usage that doesn't match the library's actual interface (common in AI-generated code)
-- **Security observations**: Unvalidated inputs, exposed secrets, missing auth checks
-- **Tight coupling**: Components that are hard to change independently
+- **Inconsistencies**: Mixed naming conventions, mixed architectural patterns, inconsistent error handling
+- **Hallucinated patterns**: Library or API usage that doesn't match the actual interface
+- **Security gaps**: Unvalidated inputs, exposed secrets, missing auth checks
+- **Tight coupling**: Components that can't change independently
 
 ---
 
-## Phase 3: Feature Extraction
+## Phase 3 — Feature Extraction
 
-Produce: `docs/feature-inventory.md`
+**Produces:** `docs/feature-inventory.md` → proceed immediately to Phase 4.
 
-Identify every feature in the target codebase. Do not skip anything.
+Identify every feature. Do not skip anything.
 
-For each feature, extract:
+For each feature:
 
 ```
 ## Feature: {name}
 
 **Tier:** Core / Supporting / Minor
 **Effort:** Low / Medium / High
-**Purpose:** 1-2 sentences
+**Purpose:** 1–2 sentences
 
-**Triggers:** What starts this? User action? Event? Cron?
+**Triggers:** What starts this? User action, event, cron, startup?
 
-**Inputs / Outputs:** What goes in, what comes out
+**Inputs / Outputs:** What goes in, what comes out — with types
 
 **Primary files:** File paths in the target codebase
 
-**Dependencies:** Other features this one requires (or "none")
+**Dependencies:** Other features required before this one (or "none")
 
 **Edge cases & failure scenarios:** What the code handles or fails to handle
 ```
 
-After extracting all features, classify each:
+Tier and effort are independent. A Minor feature can be High effort (e.g., a subtle security invariant). Flag any such combination explicitly.
 
-| Tier | Meaning | Rebuild plan treatment |
-|------|---------|----------------------|
-| **Core** | Essential to the app's purpose | Full step-by-step implementation + directory scaffold + Mermaid diagram |
-| **Supporting** | Important but not defining | Outline implementation |
-| **Minor** | Nice-to-have or peripheral | Listed with brief description |
-
-Effort is independent of tier. A Minor feature that is High effort (e.g., a subtle security invariant) should be flagged, not downplayed.
-
-**Present `docs/feature-inventory.md` to the user and ask them to confirm the feature list and tier/effort classifications before proceeding to Phase 4.** The rebuild plan is only as good as the feature inventory it is built from.
+| Tier | Meaning | Rebuild plan depth |
+|------|---------|-------------------|
+| **Core** | Essential to the app's purpose | Full step-by-step + directory scaffold + Mermaid diagram |
+| **Supporting** | Important but not defining | Outline |
+| **Minor** | Peripheral or nice-to-have | One-paragraph description |
 
 ---
 
-## Phase 4: Rebuild Plan
+## Phase 4 — Rebuild Plan
 
-Produce: `docs/rebuild-plan.md`
+**Produces:** `docs/rebuild-plan.md`
 
-This is the primary output. A developer should be able to rebuild the entire project from scratch using only this document.
+This document must stand alone. Structure it as follows:
 
-### Template
+---
 
-```markdown
+### `docs/rebuild-plan.md` structure
+
+#### Header
+```
 # Rebuild Plan: {Project Name}
 
-## Overview
+{1–2 sentences: what this document produces when followed}
+```
 
-{1-2 sentences describing what the rebuild produces}
+#### Integration Map
+Mermaid component diagram. Every feature is a node. Edges are labeled with the runtime connection mechanism: function call, HTTP, event, shared store, etc.
 
-## Integration Map
+#### Schema Overview *(skip if no database)*
+Mermaid ER diagram with all tables/collections, fields, types, and relationships.
 
-{Mermaid component diagram showing all features as nodes and their runtime connections as edges.
-Label edges with the mechanism: function call, event, HTTP, shared store, etc.}
+#### Prerequisites
+Language runtime, package manager, database server, and any other required tools — with version requirements.
 
-## Schema Overview
+#### Setup
+Steps before writing any feature code:
 
-{if the project uses a database}
-Overall schema: all tables/collections, their fields, constraints, and relationships.
-(Mermaid ER diagram)
-{if no database, skip this section entirely}
+1. Initialize the project (package manager, toolchain)
+2. Environment variables — list every required var, its purpose, and an example value
+3. External services — how to run locally (Docker commands or hosted alternatives)
+4. Test framework — install command, how to run all tests, how to run one file, where test files live
+5. Database bootstrap — migration command, seed data command
+6. Verification — the command that confirms the environment is ready
 
-## Prerequisites
+#### Business Rules & Data Contracts
+The source of truth for all interfaces and constraints. Written once here; feature sections cross-reference it. A developer must never need the original codebase to understand what to implement.
 
-{language runtime, package manager, database server, etc.}
+**API Contracts** — for every endpoint or public interface:
+```
+POST /api/example
+  Auth:     Bearer token / None
+  Request:  { field: type (required), field: type (optional) }
+  200:      { field: type }
+  401:      { error: "unauthorized" }
+  422:      { error: string, field?: string }
+```
+For CLIs: document every command, its flags, and its stdout/stderr contract.
 
-## Setup
+**Data Shapes** — the exact shape of every object that crosses a feature boundary:
+```
+User:    { id: uuid, email: string, role: "admin"|"user", createdAt: timestamp }
+Session: { token: string, userId: uuid, expiresAt: timestamp }
+```
 
-Steps a developer must complete before writing any feature code:
+**Validation Rules & Business Constraints** — stated as boolean assertions:
+- `email` must match RFC 5322 format
+- `password` must be ≥ 8 characters with ≥ 1 uppercase and ≥ 1 digit
+- (every constraint from the original, stated explicitly)
 
-1. **Initialize the project**: package manager, language toolchain
-2. **Environment variables**: list every required env var, its purpose, and an example value
-3. **External services**: how to run required services locally (Docker commands, hosted alternatives)
-4. **Database bootstrap**: migration commands, seed data commands
-5. **Verification**: the command that confirms the environment is ready (e.g., `npm run dev` starts without errors, or `psql -c "\dt"` shows the expected tables)
+**Domain Algorithms** — non-trivial computations described step-by-step in plain language, sufficient to reimplement from scratch.
 
-## Build Order
+#### Build Order
+Ordered list of features, topologically sorted. No feature appears before its prerequisites.
 
-{ordered list of features, topologically sorted — no feature appears before its dependencies}
+#### Features (one section per feature, sorted per Build Order)
 
----
+Each feature follows this template:
 
-## Feature 1: {name}
+```
+## Feature N: {name}
 
 **Tier:** Core / Supporting / Minor
 **Effort:** Low / Medium / High
@@ -256,111 +265,89 @@ Steps a developer must complete before writing any feature code:
 
 ### What It Does
 
-2-3 sentences derived from the forensic analysis. If the original implementation had quality issues (from Code Quality Observations), note what the original did and what the rebuild should do differently.
+Fully self-contained description. No references to the original code or forensic analysis.
+Include:
+- Behavior in plain language
+- Inputs with exact types and constraints (cite Business Rules & Data Contracts)
+- Outputs with exact shapes
+- All business rules and validation enforced
+- All side effects (DB writes, emails, events, cache updates)
+- Error conditions and how each is handled
+- If the original had a quality issue: state what was wrong and what the correct behavior is
 
 ### How to Rebuild It
 
-{For Core features:
-- Directory scaffold showing where new files live
-- Step-by-step implementation with architecture notes
-- Note any "don't replicate" decisions from Code Quality Observations
-}
-{For Supporting features: outline of what needs to happen}
-{For Minor features: brief description of what to build}
-
-Include a Mermaid diagram (sequence, flow, or component diagram) for every Core feature.
+[Core] Directory scaffold + step-by-step implementation + Mermaid diagram + any "don't replicate" notes
+[Supporting] Outline of what needs to happen
+[Minor] Brief description of what to build
 
 ### Checkpoint
 
-A verifiable command the developer can run to confirm this feature works.
+Command to verify this feature works, matched to app type:
 
-For a server:
-```
-curl http://localhost:3000/...
-```
-For a CLI:
-```
-./mytool --flag value
-```
-For a library:
-```
-node -e "const x = require('.'); console.log(x.myFeature())"
-```
-For a test suite:
-```
-npm test -- --grep "feature name"
-```
+  Server:  curl -X POST http://localhost:3000/api/example -d '{"field":"value"}'
+  CLI:     ./mytool --flag value
+  Library: node -e "const x = require('.'); console.log(x.myFeature())"
+  Tests:   npm test -- --grep "feature name"
 
 ### Tests
 
-- Unit tests: what to test, what to mock
-- Integration tests: what boundaries to test end-to-end
+- Unit: what logic to test in isolation, what to mock
+- Integration: what cross-boundary behavior to test end-to-end
 - Risk areas: concurrency, external calls, complex state
+```
 
----
+Place a **checkpoint section** after every 2–3 features:
 
-## Feature 2: {name}
-...
+```
+## Checkpoint: {Features N–M}
 
----
+At this point the developer should have working: X, Y, Z.
 
-## Feature Dependencies Reference
+Verify:
+  {command}  → expected output
+  {command}  → expected output
+```
+
+#### Feature Dependencies Reference
 
 | Feature | Tier | Effort | Dependencies |
 |---------|------|--------|-------------|
 | Feature A | Core | Medium | none |
 | Feature B | Core | High | Feature A |
 | Feature C | Supporting | Low | Feature A |
-| ... | ... | ... | ... |
-```
 
-### Ordering
+#### Blockers
 
-Sort features by dependency: no feature appears before its prerequisites. Use this structure:
+Every `UNKNOWN` field that could not be resolved during analysis:
 
-```
-Core Feature A (no deps)
-Core Feature B (depends on A)
-Supporting Feature C (depends on A)
-Core Feature D (depends on B)
-Minor Feature E (depends on D)
-...
-```
+| Feature | Field | What is unknown | How to investigate |
+|---------|-------|-----------------|-------------------|
+| {name} | {field} | {what is unclear} | {specific question or check to resolve it} |
 
-Place a **checkpoint** after every 2-3 features. A checkpoint is a section that says "at this point the developer should have X, Y, Z working" and provides verification steps.
+If there are no blockers: *"None — all features were fully understood."*
 
 ---
 
-## Phase 5: Test Coverage
+## Phase 5 — Test Coverage
 
-No separate document. Ensure every feature in the rebuild plan includes a **Tests** sub-section (see template above).
+No separate document. Tests are written inline per feature in `docs/rebuild-plan.md` (see the **Tests** sub-section in each feature template above).
 
-### Test harness bootstrap
+If a consolidated view is needed, produce `docs/tests/coverage-plan.md`:
 
-At the top of the rebuild plan's Setup section, include the commands to install and configure the test framework:
-
-- Which test framework to use (match the project's language/ecosystem; if none existed, recommend the standard one)
-- How to run the full test suite
-- How to run a single test file
-- Where test files live relative to source files
-
-If the developer needs a consolidated view, generate `tests/coverage-plan.md` as a final step:
-
-```markdown
+```
 # Test Coverage Plan
 
 ## Test Harness
-
-{framework, run commands, file structure}
+{framework, install command, run-all command, run-one command, file location convention}
 
 ## Per-Feature Coverage
 
 | Feature | Tier | Effort | Unit Tests | Integration Tests | E2E Tests |
 |---------|------|--------|-----------|------------------|-----------|
-| Auth | Core | High | Login validation, password hashing | Login endpoint, token refresh | Sign-up → login → protected route |
-| ... | ... | ... | ... | ... | ... |
+| ...     | ...  | ...    | ...       | ...              | ...       |
 
 ## Risk Areas
-
-{features with High effort, complex state, concurrency, or external integrations — these need integration tests, not just unit tests}
+Features that need integration tests, not just unit tests:
+{High-effort features, features with concurrency, external calls, or complex state transitions}
 ```
