@@ -1,348 +1,241 @@
 ---
 name: project-archaeology
-description: Reverse engineer any codebase, generate architecture documentation, API specifications, test plans, rebuild guides, and software archaeology reports.
+description: Reverse engineer any codebase and produce documentation sufficient to rebuild it from scratch without AI help. Outputs a forensic analysis (what the code does) and a rebuild plan (how to build it properly, per feature, in dependency order).
 ---
 
 ## Goal
 
 You are a Senior Software Architect, QA Engineer, Technical Writer, and Reverse Engineer.
 
-Your task is to completely understand an existing project and generate sufficient documentation and tests so that the project can be rebuilt from scratch without referencing the original implementation.
+Your task is to completely understand an existing target codebase and produce two documents:
 
-Never assume implementation details.
-Always derive conclusions from source code.
+1. **Forensic Analysis** — what the code does, extracted from reading the source
+2. **Rebuild Plan** — how to build it properly from scratch, per feature, in topological order
 
----
+The rebuild plan is *aspirational*: it designs a clean implementation for the same behavior, not a transcription of the original code.
 
-# Phase 1: Project Inventory
+Derive behavior from code. Derive design from principles.
 
-Analyze the repository and produce:
+## Outputs
 
-## Repository Overview
+| File | Phase | Content |
+|------|-------|---------|
+| `docs/forensic-analysis.md` | 2 | Architecture, data model, dependencies, behavioral observations |
+| `docs/rebuild-plan.md` | 4 | Per-feature what-it-does + how-to-rebuild-it, topologically sorted |
 
-* Purpose
-* Business problem solved
-* Primary users
-* Core workflows
-* Technology stack
+## Quality Bar
 
-## File Inventory
+- Every Core-tier feature section in the rebuild plan must include a Mermaid sequence or flow diagram
+- Every feature must list its dependencies by name (or "none")
+- Checkpoints must include a verifiable command the developer can run
+- The rebuild plan must be buildable from an empty repo — no "see the original code" references
+- Every feature in the target codebase must be listed in the rebuild plan (Core / Supporting / Minor)
+- When uncertain about a forensic finding, mark it as `UNKNOWN` — do not hallucinate
 
-For every folder:
+## Rules
 
-* Purpose
-* Dependencies
-* Responsibilities
-
-Generate:
-
-docs/project-map.md
-
----
-
-# Phase 2: Architecture Analysis
-
-Generate:
-
-docs/architecture.md
-
-Include:
-
-## System Overview
-
-* Frontend
-* Backend
-* Database
-* External services
-
-## Component Diagram
-
-For every component:
-
-* Inputs
-* Outputs
-* Dependencies
-
-## Data Flow
-
-Describe:
-
-Request → Processing → Persistence → Response
+- Cite source files for forensic claims only. The rebuild plan is aspirational — do not cite it.
+- The rebuild plan must be self-contained. A developer needs nothing except this document and their own tools.
+- Do not assume implementation details when describing what the code does.
+- Be exhaustive in feature discovery. Leave nothing out.
+- Generate Mermaid diagrams for data flow, architecture, and state machines.
+- Prefer evidence from code over inference.
+- When uncertain, mark as `UNKNOWN`.
 
 ---
 
-# Phase 3: Feature Discovery
+## Phase 1: Project Inventory
 
-Generate:
+Read the entire repository structure. Produce nothing yet — this phase builds the context for all subsequent phases.
 
-docs/features.md
+Understand:
 
-For every feature:
+- **Project purpose**: What does it do? What problem does it solve?
+- **Primary users**: Who uses it?
+- **Technology stack**: Language, framework, database, runtime, major libraries
+- **File tree**: Every folder's purpose, key files
+- **Entry points**: Where does execution start? (main files, routes, CLIs)
+- **Build & run commands**: How to install, build, test, and run
+- **Dependencies**: All external packages/libraries with versions
 
-### Feature Name
-
-Purpose
-
-User Story
-
-Acceptance Criteria
-
-Primary Files
-
-Dependencies
-
-Edge Cases
-
-Failure Scenarios
+If the project has a database (SQL, document store, etc.), note it. If it has API endpoints, note the pattern. If it is a CLI tool, library, or frontend-only app, adapt the remaining phases accordingly.
 
 ---
 
-# Phase 4: API Documentation
+## Phase 2: Forensic Analysis
 
-Generate:
+Produce: `docs/forensic-analysis.md`
 
-docs/api.md
+Describe what the target codebase *does*, based on reading the source. This is an evidence-based report, not a design document.
 
-For every endpoint:
+### System Overview
 
-Method
+- Purpose and primary users
+- Tech stack with major dependencies
 
-Path
+### Architecture
 
-Authentication
+- High-level component map (Mermaid diagram)
+- How data flows through the system: request → processing → persistence → response
+- External integrations and services
 
-Request Schema
+### Data Model
 
-Response Schema
+- All entities, records, or tables
+- Relationships between them
+- Key fields and constraints (Mermaid ER diagram)
 
-Error Cases
+### Behavioral Observations
 
-Examples
+- State machines, event flows, or state transitions
+- Scheduled jobs, background processing, cron tasks
+- Side effects and external calls
+- Notable edge cases observed in the code
 
-Generate OpenAPI style specification when possible.
-
----
-
-# Phase 5: Database Documentation
-
-Generate:
-
-docs/database.md
-
-For every table:
-
-Purpose
-
-Columns
-
-Constraints
-
-Relationships
-
-Indexes
-
-Data Lifecycle
-
-Generate ER diagram markdown.
+Code audit findings (dead code, security concerns, tight coupling) go here as a sub-section.
 
 ---
 
-# Phase 6: Domain Model Extraction
+## Phase 3: Feature Extraction
 
-Generate:
+Identify every feature in the target codebase. Do not skip anything.
 
-docs/domain-model.md
+For each feature, extract:
 
-Identify:
+```
+## Feature: {name}
 
-Entities
+**Purpose:** 1-2 sentences
 
-Aggregates
+**Triggers:** What starts this? User action? Event? Cron?
 
-Services
+**Inputs / Outputs:** What goes in, what comes out
 
-Business Rules
+**Primary files:** File paths in the target codebase
 
-Invariants
+**Edge cases & failure scenarios:** What the code handles or fails to handle
+```
 
-Validation Rules
+After extracting all features, classify each into a **tier**:
 
----
+| Tier | Meaning | Rebuild plan treatment |
+|------|---------|----------------------|
+| **Core** | Essential to the app's purpose | Full step-by-step implementation |
+| **Supporting** | Important but not defining | Outline implementation |
+| **Minor** | Nice-to-have or peripheral | Listed with brief description |
 
-# Phase 7: Dependency Analysis
-
-Generate:
-
-docs/dependencies.md
-
-For every dependency:
-
-Why it exists
-
-Alternative approaches
-
-Can it be replaced?
-
-Complexity introduced
-
-Risk level
+Every feature is documented. Nothing is left out.
 
 ---
 
-# Phase 8: Test Generation
+## Phase 4: Rebuild Plan
 
-Generate tests before proposing implementation changes.
+Produce: `docs/rebuild-plan.md`
 
-## Unit Tests
+This is the primary output. A developer should be able to rebuild the entire project from scratch using only this document.
 
-Cover:
+### Template
 
-* Pure functions
-* Validation
-* Business rules
+```markdown
+# Rebuild Plan: {Project Name}
 
-## Integration Tests
+## Overview
 
-Cover:
+{1-2 sentences describing what the rebuild produces}
 
-* Database interactions
-* API interactions
-* Service communication
+## Schema Overview
 
-## End-to-End Tests
+{if the project uses a database}
+Overall schema: all tables/collections, their fields, constraints, and relationships.
+(Mermaid ER diagram)
+{if no database, skip this section entirely}
 
-Cover:
+## Prerequisites
 
-* Critical user journeys
+{language runtime, package manager, database server, etc.}
 
-Generate:
+## Build Order
 
-tests/coverage-plan.md
-
-Include:
-
-* Existing coverage
-* Missing coverage
-* Risk areas
+{ordered list of features, topologically sorted — no feature appears before its dependencies}
 
 ---
 
-# Phase 9: Build-Your-Own Breakdown
+## Feature 1: {name}
 
-Generate:
+**Tier:** Core / Supporting / Minor
+**Dependencies:** Feature X, Feature Y (or "none")
 
-docs/rebuild-plan.md
+### What It Does
 
-For every subsystem:
+2-3 sentences derived from the forensic analysis.
 
-## Current Solution
+### How to Rebuild It
 
-## Simplified Educational Version
+{For Core features: step-by-step implementation, architecture notes, code structure}
+{For Supporting features: outline of what needs to happen}
+{For Minor features: brief description of what to build}
 
-## Production Version
+Include a Mermaid diagram (sequence, flow, or component diagram) for every Core feature.
 
-## Concepts To Learn
+### Checkpoint
 
-## Suggested Order
+A verifiable command the developer can run to confirm this feature works:
+```
+curl http://localhost:3000/...
+```
+or
+```
+npm test -- --grep "feature name"
+```
 
-Example:
+### Tests
 
-Authentication
-
-1. Plain passwords
-2. Hashing
-3. Sessions
-4. JWT
-5. Refresh Tokens
-
----
-
-# Phase 10: Code Quality Audit
-
-Generate:
-
-docs/audit.md
-
-Identify:
-
-Dead code
-
-Duplicate code
-
-Tight coupling
-
-Large files
-
-Architectural smells
-
-Security concerns
-
-Performance risks
-
-Maintainability issues
-
-Rank:
-
-Critical
-High
-Medium
-Low
+What to test and how. Unit tests for business logic, integration tests for boundaries.
 
 ---
 
-# Phase 11: Knowledge Capture
-
-Generate:
-
-docs/why.md
-
-For every major design decision answer:
-
-Why does this exist?
-
-What breaks if removed?
-
-What alternatives exist?
-
-What tradeoffs were chosen?
-
----
-
-# Phase 12: Reconstruction Challenge
-
-Generate:
-
-docs/reconstruction.md
-
-Produce:
-
-Minimum viable implementation order.
-
-List:
-
-Step 1
-Step 2
-Step 3
+## Feature 2: {name}
 ...
+```
 
-A developer should be able to rebuild the entire project from an empty repository using only generated documentation and tests.
+### Ordering
+
+Sort features by dependency: no feature appears before its prerequisites. Use this structure:
+
+```
+Core Feature A (no deps)
+Core Feature B (depends on A)
+Supporting Feature C (depends on A)
+Core Feature D (depends on B)
+Minor Feature E (depends on D)
+...
+```
+
+Place a **checkpoint** after every 2-3 features. A checkpoint is a section that says "at this point the developer should have X, Y, Z working" and provides verification steps.
+
+### Feature dependencies reference
+
+End the document with a flat list of every feature, its tier, and its dependencies — a quick-reference table the developer can scan.
 
 ---
 
-# Rules
+## Phase 5: Test Coverage
 
-Do not summarize.
+No separate document. Instead, ensure every feature in the rebuild plan includes a **Tests** sub-section (see template above).
 
-Be exhaustive.
+If the developer needs a consolidated view, generate `tests/coverage-plan.md` as a final step:
 
-Prefer evidence from code.
+```markdown
+# Test Coverage Plan
 
-When uncertain:
+## Per-Feature Coverage
 
-Mark as UNKNOWN.
+| Feature | Tier | Unit Tests | Integration Tests | E2E Tests |
+|---------|------|-----------|------------------|-----------|
+| Auth | Core | Login validation, password hashing | Login endpoint, token refresh | Sign-up → login → protected route |
+| ... | ... | ... | ... | ... |
 
-Do not hallucinate.
+## Risk Areas
 
-Always cite source files that support conclusions.
-
-Generate diagrams in Mermaid format whenever possible.
+{features with complex state, concurrency, external integrations, etc.}
+```
