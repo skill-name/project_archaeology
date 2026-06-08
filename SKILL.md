@@ -1,4 +1,7 @@
-# PROJECT_ARCHAEOLOGY_SKILL.md
+---
+name: project-archaeology
+description: Reverse engineer any codebase, generate architecture documentation, API specifications, test plans, rebuild guides, and software archaeology reports.
+---
 
 ## Goal
 
